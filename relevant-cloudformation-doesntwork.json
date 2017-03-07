@@ -1,0 +1,78 @@
+Merged event and bucket configuration - doesn't work
+"MergedEventLambdaFunction": {
+  "Type": "AWS::Lambda::Function",
+  "Properties": {
+    "Code": {
+      "S3Bucket": {
+        "Ref": "ServerlessDeploymentBucket"
+      },
+      "S3Key": "serverless/merge-buckets/dev/1488923831768-2017-03-07T21:57:11.768Z/merge-buckets.zip"
+    },
+    "FunctionName": "merge-buckets-dev-mergedEvent",
+    "Handler": "handler.hello",
+    "MemorySize": 1024,
+    "Role": {
+      "Fn::GetAtt": [
+        "IamRoleLambdaExecution",
+        "Arn"
+      ]
+    },
+    "Runtime": "nodejs4.3",
+    "Timeout": 6
+  },
+  "DependsOn": [
+    "IamRoleLambdaExecution"
+  ]
+}
+
+"S3BucketMerged": {
+  "Type": "AWS::S3::Bucket",
+  "Properties": {
+    "BucketName": {
+      "Fn::Join": [
+        "-",
+        [
+          "merged",
+          {
+            "Ref": "AWS::AccountId"
+          }
+        ]
+      ]
+    },
+    "NotificationConfiguration": {
+      "LambdaConfigurations": [
+        {
+          "Event": "s3:ObjectCreated:*",
+          "Function": {
+            "Fn::GetAtt": [
+              "MergedEventLambdaFunction",
+              "Arn"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
+
+"MergedEventLambdaPermissionMergedS3": {
+  "Type": "AWS::Lambda::Permission",
+  "Properties": {
+    "FunctionName": {
+      "Fn::GetAtt": [
+        "MergedEventLambdaFunction",
+        "Arn"
+      ]
+    },
+    "Action": "lambda:InvokeFunction",
+    "Principal": "s3.amazonaws.com",
+    "SourceArn": {
+      "Fn::Join": [
+        "",
+        [
+          "arn:aws:s3:::merged"
+        ]
+      ]
+    }
+  }
+}

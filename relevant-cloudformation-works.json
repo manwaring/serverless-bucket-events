@@ -1,0 +1,87 @@
+Manually configured bucket and event - works
+"ManualEventLambdaFunction": {
+  "Type": "AWS::Lambda::Function",
+  "Properties": {
+    "Code": {
+      "S3Bucket": {
+        "Ref": "ServerlessDeploymentBucket"
+      },
+      "S3Key": "serverless/merge-buckets/dev/1488923831768-2017-03-07T21:57:11.768Z/merge-buckets.zip"
+    },
+    "FunctionName": "merge-buckets-dev-manualEvent",
+    "Handler": "handler.hello",
+    "MemorySize": 1024,
+    "Role": {
+      "Fn::GetAtt": [
+        "IamRoleLambdaExecution",
+        "Arn"
+      ]
+    },
+    "Runtime": "nodejs4.3",
+    "Timeout": 6
+  },
+  "DependsOn": [
+    "IamRoleLambdaExecution"
+  ]
+}
+
+"S3BucketManualEvent": {
+  "Type": "AWS::S3::Bucket",
+  "DependsOn": [
+    "ManualEventLambdaPermissionS3BucketS3"
+  ],
+  "Properties": {
+    "BucketName": {
+      "Fn::Join": [
+        "-",
+        [
+          "manual",
+          {
+            "Ref": "AWS::AccountId"
+          }
+        ]
+      ]
+    },
+    "NotificationConfiguration": {
+      "LambdaConfigurations": [
+        {
+          "Event": "s3:ObjectCreated:*",
+          "Function": {
+            "Fn::GetAtt": [
+              "ManualEventLambdaFunction",
+              "Arn"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
+
+"ManualEventLambdaPermissionS3BucketS3": {
+  "DependsOn": [
+    "ManualEventLambdaFunction"
+  ],
+  "Type": "AWS::Lambda::Permission",
+  "Properties": {
+    "FunctionName": {
+      "Fn::GetAtt": [
+        "ManualEventLambdaFunction",
+        "Arn"
+      ]
+    },
+    "Action": "lambda:InvokeFunction",
+    "Principal": "s3.amazonaws.com",
+    "SourceArn": {
+      "Fn::Join": [
+        "-",
+        [
+          "arn:aws:s3:::manual",
+          {
+            "Ref": "AWS::AccountId"
+          }
+        ]
+      ]
+    }
+  }
+}

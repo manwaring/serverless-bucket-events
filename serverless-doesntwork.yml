@@ -1,0 +1,26 @@
+service: merge-buckets
+
+provider:
+  name: aws
+  runtime: nodejs4.3
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - 's3:*'
+      Resource: '*'
+
+functions:
+
+  # Doesn't work - results in 'Unable to validate the following destination configurations' exception from CloudFormation
+  mergedEvent:
+    handler: handler.hello
+    events:
+      - s3: merged
+
+resources:
+  Resources:
+
+    S3BucketMerged:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: { 'Fn::Join' : ['-', ['merged', { 'Ref' : 'AWS::AccountId' } ] ]  }

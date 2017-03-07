@@ -1,0 +1,50 @@
+service: merge-buckets
+
+provider:
+  name: aws
+  runtime: nodejs4.3
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - 's3:*'
+      Resource: '*'
+
+functions:
+
+  # Works - manually setup invokation for this function when s3 events occur, using the resources section below, can set all bucket properties there
+  manualEvent:
+    handler: handler.hello
+
+  # Works - automatically creates s3 bucket using sls framework, but not all bucket properties available to set here (static site hosting, etc)
+  independentEvent:
+    handler: handler.hello
+    events:
+      - s3:
+          bucket: independent-accountid-random
+          event: s3:ObjectCreated:*
+
+resources:
+  Resources:
+
+    S3BucketManualEvent:
+      Type: AWS::S3::Bucket
+      DependsOn:
+        - ManualEventLambdaPermissionS3BucketS3
+      Properties:
+        BucketName: { 'Fn::Join' : ['-', ['manual', { 'Ref' : 'AWS::AccountId' } ] ]  }
+        NotificationConfiguration:
+          LambdaConfigurations:
+            - Event: 's3:ObjectCreated:*'
+              Function:
+                'Fn::GetAtt': [ ManualEventLambdaFunction, Arn ]
+
+    ManualEventLambdaPermissionS3BucketS3:
+      DependsOn:
+        - ManualEventLambdaFunction
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName:
+          'Fn::GetAtt': [ ManualEventLambdaFunction, Arn ]
+        Action: 'lambda:InvokeFunction'
+        Principal: 's3.amazonaws.com'
+        SourceArn: { 'Fn::Join' : ['-', [ 'arn:aws:s3:::manual', { 'Ref' : 'AWS::AccountId' } ] ]  }
